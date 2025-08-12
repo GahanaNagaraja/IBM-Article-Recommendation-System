@@ -57,9 +57,8 @@ The notebook expects a single CSV of user–article interactions, typically with
 - **Exposed matrices**: `U` (users × k), `Sigma` (k,), `Vt` (k × items).  
 - **Key function**: `get_svd_similar_article_ids`.
 
-## 6) Results
 
- ## 6) Results
+## 6) Results
 
 **Exploratory Data Analysis (from `sol_1_dict`)**
 - 50% of individuals have ≤ **3** interactions  
