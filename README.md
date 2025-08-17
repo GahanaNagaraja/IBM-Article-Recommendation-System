@@ -1,75 +1,63 @@
 # IBM-Article-Recommendation-System
 
-## 1) Project Overview
-This project builds a recommendation system for IBM Watson Studio community articles.  
-It follows the Udacity “Recommendations with IBM” template and expands it with content-based
-clustering, matrix factorization, and a small offline evaluation so you can compare methods.
+## Project Overview
+The goal is to recommend relevant IBM Watson Studio community articles to users by exploring and combining:
+1) **Popularity (rank-based)**  
+2) **User–user collaborative filtering (CF)**  
+3) **Content-based** (TF-IDF on titles + LSA + KMeans)  
+4) **Matrix factorization** (Truncated SVD on the interaction matrix)
 
-## 2) Objectives
-- Explore user–article interaction data and report key stats (per rubric).
-- Deliver baseline **rank-based** recommendations for cold-start scenarios.
-- Implement **user–user collaborative filtering** (basic and improved).
-- Add a **content-based** method using TF-IDF + clustering to recommend similar articles.
-- Train an **SVD (matrix factorization)** model for item–item recommendations in latent space.
-- Provide a lightweight **offline evaluation** (Hit-Rate@10) and summarize findings.
+---
 
-## 3) Dataset Description
-The notebook expects a single CSV of user–article interactions, typically with:
+## Dataset
+A single CSV of implicit interactions (each row = user viewed an article). Expected columns:
+
 - `user_id` *(or `email`, which is mapped to `user_id`)*  
 - `article_id`  
-- `title` *(optional but used for content-based; if missing, titles are synthesized as “Article {id}”)*
+- `title` *(optional; used by content-based. If missing, the code synthesizes “Article {id}”.)*
 
 **Notes**
-- No explicit ratings are provided; an interaction implies implicit positive feedback (1).
-- In the Udacity workspace, the provided dataset is already available; do **not** include it in your ZIP.
+- No explicit ratings; viewing an article counts as positive feedback (1).
+- For Udacity submission, **do not** include the dataset in your ZIP; the workspace provides it at `data/user-item-interactions.csv`.
 
-## 4) Technologies Used
-- **Python**: data processing & modeling  
-- **pandas / numpy**: data wrangling  
-- **scikit-learn**: TF-IDF, KMeans, TruncatedSVD, cosine similarity, silhouette score  
-- **matplotlib**: simple plots (EVR curve, silhouette vs. K)
+---
 
-## 5) Recommendation Approaches
-### 5.1 Rank-Based (Popularity)
-- **What**: Recommend the most-viewed articles platform-wide.  
-- **Why**: Strong, simple baseline for **new users** (cold start) and tie-breaking.  
-- **Key functions**: `get_top_article_ids`, `get_top_articles`, `get_article_names`.
+## Methods
 
-### 5.2 User–User Collaborative Filtering
-- **Matrix**: Binary user–item matrix (`1` if user viewed article, else `0`).  
-- **Similarity**: Dot-product over binary vectors → more overlap = more similar users.  
-- **Basic recs**: Pull items from nearest neighbors that the target user hasn’t seen; rank by global popularity.  
-- **Improved recs**: When neighbors tie on similarity, prefer **power users** (more total interactions), then rank candidate items by popularity.  
-- **New-user fallback**: Top-N popular articles.  
-- **Key functions**: `create_user_item_matrix`, `find_similar_users`, `get_top_sorted_users`,  
-  `user_user_recs`, `user_user_recs_part2`, `get_user_articles`.
+### Rank-Based (Popularity)
+Recommends globally most-viewed articles; used for cold-start and as a stable fallback.
 
-### 5.3 Content-Based (Titles → TF-IDF + KMeans)
-- **Text features**: TF-IDF of article **titles** (works even if only titles are available).  
-- **Clustering**: Choose **K** via **silhouette score** (search K ∈ [2, 30], bounded by data size), then fit KMeans.  
-- **Recommendation**: For a given article, restrict to its cluster and rank neighbors by cosine similarity in TF-IDF space.  
-- **Key function**: `get_similar_articles`.
+### User–User Collaborative Filtering
+- Builds a binary **user×item** matrix.
+- Similarity = dot product over binary vectors (overlap of seen items).
+- **Improved version** prefers neighbors with more total interactions and ranks candidate items by global popularity.
 
-### 5.4 Matrix Factorization (SVD)
-- **Model**: Truncated SVD on the binary user–item matrix (implicit feedback).  
-- **k selection**: Plot cumulative Explained Variance Ratio (EVR) and choose the smallest **k** that reaches ~**90% EVR**.  
-- **Item–item recommendations**: Compute cosine similarity between item vectors in latent space (`Vtᵀ`).  
-- **Exposed matrices**: `U` (users × k), `Sigma` (k,), `Vt` (k × items).  
-- **Key function**: `get_svd_similar_article_ids`.
+### Content-Based (Titles → TF-IDF + LSA + KMeans)
+- Vectorizes titles with **TF-IDF**; reduces with **TruncatedSVD (LSA)**; clusters with **KMeans**.
+- For a query article, fetch others in the same cluster and rank by **unique-user popularity**.
 
+### Matrix Factorization (SVD)
+- Fits **TruncatedSVD** on the user×item matrix.
+- Picks latent dimension by curve shape (and ~90% EVR heuristic).
+- Item–item similarity computed in latent space via cosine similarity.
 
-## 6) Results
+### Evaluation
+- **Hit-Rate@10** on a simple train/test split (robust to small datasets; stratifies when feasible).
 
-**Exploratory Data Analysis (from `sol_1_dict`)**
-- 50% of individuals have ≤ **3** interactions  
-- Total user–article interactions: **45,993**  
-- Max interactions by any 1 user: **364**  
+---
+
+## Results
+
+**Exploratory Data Analysis**
+- Median interactions per user: **3**  
+- Total interactions: **45,993**  
+- Max interactions by a single user: **364**  
 - Most viewed article id: **1429.0** with **937** views  
 - Unique articles with ≥1 interaction: **714**  
 - Unique users: **5,148**  
-- Unique articles on platform: **714**
+- Total unique articles: **714**
 
-**Rank-Based (Top-10 titles)**
+**Top-10 Popular Titles**
 - use deep learning for image classification  
 - insights from new york car accident reports  
 - visualize car data with brunel  
@@ -82,14 +70,44 @@ The notebook expects a single CSV of user–article interactions, typically with
 - finding optimal location of new store using decision optimization
 
 **Content-Based**
-- Chosen K (silhouette): **29**  
+- Chosen clusters (silhouette-guided): **K = 29**  
 - Example similar-to `0.0`: `[730.0, 470.0, 651.0, 382.0, 103.0]`
 
 **SVD**
-- Chosen latent k (EVR ≈ 0.90): **50**  
-- Example item–item (latent) similar to `0.0`: `[1112.0, 1124.0, 1292.0, 1066.0, 409.0]`
+- Chosen latent features (≈90% EVR): **k = 50**  
+- Example latent similar-to `0.0`: `[1112.0, 1124.0, 1292.0, 1066.0, 409.0]`
 
 **Offline Evaluation**
-- **Hit-Rate@10**: **0.259** (users evaluated: **1,054**; split: non-stratified (fallback))
+- **Hit-Rate@10**: **0.259** (users evaluated: **1,054**; split: non-stratified fallback)
 
+---
 
+## Getting Started
+
+### Colab Quick Start
+1. Upload:
+   - `Recommendations_with_IBM.ipynb`
+   - `project_tests.py`
+   - `user-item-interactions.csv`
+2. Add this small setup cell **at the top** (already included in my run) to satisfy Udacity’s expected path:
+   - Copy `user-item-interactions.csv` → `data/user-item-interactions.csv`.
+3. Run all cells top→bottom. Inline tests should print “passed” messages.
+
+### Local Setup
+```bash
+# (optional) create & activate a virtual env
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+# install dependencies
+pip install pandas numpy scikit-learn matplotlib jupyter
+
+# ensure Udacity tests see the data in the expected path
+mkdir -p data
+cp user-item-interactions.csv data/user-item-interactions.csv
+
+# start Jupyter
+jupyter notebook
+# open Recommendations_with_IBM.ipynb and Run All
