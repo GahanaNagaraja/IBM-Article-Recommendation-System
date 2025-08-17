@@ -92,22 +92,3 @@ Recommends globally most-viewed articles; used for cold-start and as a stable fa
 2. Add this small setup cell **at the top** (already included in my run) to satisfy Udacity’s expected path:
    - Copy `user-item-interactions.csv` → `data/user-item-interactions.csv`.
 3. Run all cells top→bottom. Inline tests should print “passed” messages.
-
-### Local Setup
-```bash
-# (optional) create & activate a virtual env
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# install dependencies
-pip install pandas numpy scikit-learn matplotlib jupyter
-
-# ensure Udacity tests see the data in the expected path
-mkdir -p data
-cp user-item-interactions.csv data/user-item-interactions.csv
-
-# start Jupyter
-jupyter notebook
-# open Recommendations_with_IBM.ipynb and Run All
